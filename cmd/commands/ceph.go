@@ -17,6 +17,9 @@ limitations under the License.
 package command
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/rook/kubectl-rook-ceph/pkg/exec"
 	"github.com/rook/kubectl-rook-ceph/pkg/logging"
 	"github.com/spf13/cobra"
@@ -32,6 +35,14 @@ var CephCmd = &cobra.Command{
 		clientsets := GetClientsets(cmd.Context())
 		VerifyOperatorPodIsRunning(cmd.Context(), clientsets, OperatorNamespace, CephClusterNamespace)
 		logging.Info("running 'ceph' command with args: %v", args)
+		if args[0] == "daemon" {
+			c := fmt.Sprintf("CEPH_ARGS='' %s", cmd.Use)
+			if len(args) > 1 {
+				if strings.HasPrefix(args[1], "osd.") {
+					exec.RunCommandInOsdPod(cmd.Context(), clientsets, args[1], c, args, CephClusterNamespace, false, true)
+				}
+			}
+		}
 		exec.RunCommandInOperatorPod(cmd.Context(), clientsets, cmd.Use, args, OperatorNamespace, CephClusterNamespace, false, true)
 	},
 }

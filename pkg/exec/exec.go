@@ -37,6 +37,24 @@ var (
 	CephClusterNamespace string // Cephcluster namespace
 )
 
+func RunCommandInOsdPod(ctx context.Context, clientsets *k8sutil.Clientsets, osdName string, cmd string, args []string, clusterNamespace string, returnOutput, exitOnError bool) string {
+	var pod v1.Pod
+	var err error
+
+	pod, err = k8sutil.WaitForPodToRun(ctx, clientsets.Kube, clusterNamespace, fmt.Sprintf("app=rook-ceph-osd,osd=%s", osdName))
+	if err != nil {
+		logging.Fatal(fmt.Errorf("failed to wait for osd pod %s to run: %v", osdName, err))
+	}
+
+	var stdout, stderr bytes.Buffer
+	execCmdInPod(ctx, clientsets, cmd, pod.Name, "osd", pod.Namespace, clusterNamespace, args, &stdout, &stderr, returnOutput, exitOnError)
+	if !returnOutput {
+		return ""
+	}
+	fmt.Print(stderr.String())
+	return stdout.String()
+}
+
 func RunCommandInOperatorPod(ctx context.Context, clientsets *k8sutil.Clientsets, cmd string, args []string, operatorNamespace, clusterNamespace string, returnOutput, exitOnError bool) string {
 	var pod v1.Pod
 	var err error
